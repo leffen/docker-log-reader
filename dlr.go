@@ -66,7 +66,6 @@ func (d *Dlog) dumpLog(id string) {
 		Timestamps: true,
 	}
 
-	// Replace this ID with a container that really exists
 	out, err := d.cli.ContainerLogs(ctx, id, options)
 	if err != nil {
 		panic(err)
