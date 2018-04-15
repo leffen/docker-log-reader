@@ -5,7 +5,9 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"strings"
+	"time"
 
 	"github.com/davecgh/go-spew/spew"
 
@@ -44,7 +46,7 @@ func (d *Dlog) Run() error {
 	return nil
 }
 
-func (d *Dlog) dumpLog(id string) {
+func (d *Dlog) dumpLog(id string) error {
 	ctx := context.Background()
 
 	options := types.ContainerLogsOptions{
@@ -61,7 +63,7 @@ func (d *Dlog) dumpLog(id string) {
 
 	out, err := d.cli.ContainerLogs(ctx, id, options)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	scanner := bufio.NewScanner(out)
@@ -72,6 +74,16 @@ func (d *Dlog) dumpLog(id string) {
 
 			fmt.Printf("%4.4s %v\n", id, b)
 
+		}
+		err = scanner.Err()
+		if err != nil {
+
+			if err != io.EOF {
+				out.Close()
+				return err
+			}
+			// EOF. Sleep a bit and check again
+			<-time.After(500 * time.Millisecond)
 		}
 	}
 
@@ -131,6 +143,8 @@ func logRecord(b []byte) *DockerLog {
 			labels[pair[0]] = pair[1]
 		}
 	}
+
+	fmt.Printf("--> logmsg = %v\n", logmsg)
 
 	return &DockerLog{
 		Type:      t,
